@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#22272a" />
+    <title>Пепельный караван — прототип</title>
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">СЕРЫЙ ПРОТОТИП · M1</p>
+          <h1>Пепельный караван</h1>
+        </div>
+        <button id="reset-game" class="button button-muted" type="button">Сбросить</button>
+      </header>
+
+      <section class="resource-panel" aria-live="polite">
+        <div>
+          <span class="label">Лом</span>
+          <strong id="scrap-value">0</strong>
+        </div>
+        <div>
+          <span class="label">Доход</span>
+          <strong id="income-value">0 / с</strong>
+        </div>
+      </section>
+
+      <section class="route-panel">
+        <div class="section-heading">
+          <h2>Маршрут</h2>
+          <span id="finds-hint">Нажимайте на находки</span>
+        </div>
+        <div id="route-scene" class="route-scene" aria-label="Дорога каравана и находки">
+          <div id="finding-layer" class="finding-layer"></div>
+        </div>
+      </section>
+
+      <section class="fleet-panel">
+        <div class="section-heading">
+          <h2>Экипажи и техника</h2>
+          <span>Три стартовых тира</span>
+        </div>
+        <div id="tier-list" class="tier-list"></div>
+      </section>
+
+      <p id="offline-notice" class="notice" hidden></p>
+      <p id="game-error" class="error" role="alert" hidden></p>
+      <footer>Прогресс сохраняется в этом браузере. Офлайн-доход начисляется максимум за 4 часа.</footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

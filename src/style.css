@@ -1,0 +1,275 @@
+:root {
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: #ece9df;
+  background: #171b1d;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  padding: 24px 14px;
+  background:
+    radial-gradient(ellipse at 50% 0%, #333b3d 0, transparent 55%),
+    #171b1d;
+}
+
+button {
+  font: inherit;
+}
+
+.game-shell {
+  width: min(100%, 660px);
+  margin: 0 auto;
+}
+
+.topbar,
+.section-heading,
+.resource-panel,
+.tier-card,
+.tier-title-row,
+.tier-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.topbar {
+  margin-bottom: 18px;
+}
+
+.eyebrow,
+.label,
+.tier-meta,
+footer,
+.section-heading span {
+  color: #a4aaa8;
+}
+
+.eyebrow {
+  margin: 0 0 5px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: clamp(22px, 6vw, 30px);
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 17px;
+}
+
+.button,
+.buy-button {
+  border: 1px solid #59615e;
+  border-radius: 9px;
+  padding: 10px 14px;
+  color: #f0eee7;
+  background: #343c3e;
+  cursor: pointer;
+}
+
+.button:hover,
+.buy-button:not(:disabled):hover {
+  background: #414b4d;
+}
+
+.button-muted {
+  font-size: 13px;
+}
+
+.resource-panel,
+.route-panel,
+.fleet-panel {
+  border: 1px solid #3a4242;
+  border-radius: 14px;
+  background: rgb(35 41 43 / 94%);
+}
+
+.resource-panel {
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+
+.resource-panel > div {
+  display: grid;
+  gap: 4px;
+}
+
+.resource-panel > div:last-child {
+  text-align: right;
+}
+
+.label {
+  font-size: 12px;
+}
+
+.resource-panel strong {
+  font-size: clamp(20px, 5vw, 26px);
+  font-variant-numeric: tabular-nums;
+}
+
+.route-panel,
+.fleet-panel {
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.section-heading {
+  margin-bottom: 12px;
+}
+
+.section-heading span {
+  font-size: 12px;
+  text-align: right;
+}
+
+.route-scene {
+  position: relative;
+  width: 100%;
+  height: 190px;
+  overflow: hidden;
+  border: 1px solid #4a5353;
+  border-radius: 10px;
+  background: #262d30;
+}
+
+.route-scene canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.finding-layer {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.finding-target {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.finding-target:focus-visible {
+  outline: 2px solid #f4d395;
+  outline-offset: -5px;
+}
+
+.tier-list {
+  display: grid;
+  gap: 9px;
+}
+
+.tier-card {
+  min-height: 76px;
+  border: 1px solid #414a49;
+  border-radius: 10px;
+  padding: 12px;
+  background: #2a3132;
+}
+
+.tier-card.is-locked {
+  opacity: 0.55;
+}
+
+.tier-title-row {
+  justify-content: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.tier-title-row strong {
+  font-size: 14px;
+}
+
+.tier-meta {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tier-details {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.buy-button {
+  min-width: 108px;
+  padding: 9px 10px;
+  border-color: #9c8053;
+  background: #554632;
+  font-size: 13px;
+}
+
+.buy-button:disabled {
+  color: #909592;
+  border-color: #4a514f;
+  background: #303637;
+  cursor: not-allowed;
+}
+
+.notice {
+  border: 1px solid #6c704f;
+  border-radius: 9px;
+  padding: 12px 14px;
+  color: #e8dfb5;
+  background: #373a2b;
+}
+
+.error {
+  border: 1px solid #a34a43;
+  border-radius: 9px;
+  padding: 12px 14px;
+  color: #ffd1ca;
+  background: #462a29;
+}
+
+footer {
+  padding: 3px 4px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (max-width: 440px) {
+  body {
+    padding: 14px 10px;
+  }
+
+  .route-scene {
+    height: 170px;
+  }
+
+  .tier-card {
+    align-items: flex-start;
+  }
+
+  .tier-details {
+    display: grid;
+    justify-items: end;
+  }
+}
