@@ -1,10 +1,7 @@
-import {
-  OFFLINE_CAP_SECONDS,
-  OFFLINE_EFFICIENCY,
-  OFFLINE_MINIMUM_SECONDS,
-} from "./config.ts";
-import { addScrap, getTotalIncome } from "./economy.ts";
+import { OFFLINE_CAP_SECONDS, OFFLINE_EFFICIENCY, OFFLINE_MINIMUM_SECONDS } from "./config.ts";
+import { addScrap, getOfflineSettings, getTotalIncome } from "./economy.ts";
 import type { GameState } from "./types.ts";
+import { updateProgression } from "./progression.ts";
 
 export interface OfflineResult {
   elapsedSeconds: number;
@@ -14,20 +11,27 @@ export interface OfflineResult {
 export function calculateOfflineScrap(
   incomePerSecond: number,
   elapsedSeconds: number,
+  capSeconds = OFFLINE_CAP_SECONDS,
+  efficiency = OFFLINE_EFFICIENCY,
 ): number {
   if (
     !Number.isFinite(incomePerSecond) ||
     incomePerSecond < 0 ||
     !Number.isFinite(elapsedSeconds) ||
-    elapsedSeconds < 0
+    elapsedSeconds < 0 ||
+    !Number.isFinite(capSeconds) ||
+    capSeconds < 0 ||
+    !Number.isFinite(efficiency) ||
+    efficiency < 0 ||
+    efficiency > 1
   ) {
     throw new RangeError("Offline income and elapsed time must be non-negative.");
   }
 
   return (
     incomePerSecond *
-    Math.min(elapsedSeconds, OFFLINE_CAP_SECONDS) *
-    OFFLINE_EFFICIENCY
+    Math.min(elapsedSeconds, capSeconds) *
+    efficiency
   );
 }
 
@@ -43,13 +47,20 @@ export function applyOfflineEarnings(
   }
 
   const elapsedSeconds = Math.floor((nowMs - state.savedAtMs) / 1000);
+  const settings = getOfflineSettings(state);
   const creditedScrap =
     elapsedSeconds >= OFFLINE_MINIMUM_SECONDS
-      ? calculateOfflineScrap(getTotalIncome(state), elapsedSeconds)
+      ? calculateOfflineScrap(
+          getTotalIncome(state),
+          elapsedSeconds,
+          settings.capSeconds,
+          settings.efficiency,
+        )
       : 0;
 
   if (creditedScrap > 0) {
     addScrap(state, creditedScrap);
+    updateProgression(state);
   }
   state.savedAtMs = nowMs;
 

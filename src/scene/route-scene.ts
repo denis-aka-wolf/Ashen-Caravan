@@ -24,13 +24,20 @@ export class RouteScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const graphics = this.graphics;
     const roadY = height * 0.57;
+    const palette: Record<string, { sky: number; road: number; line: number }> = {
+      ruins: { sky: 0x323a3b, road: 0x626664, line: 0x95978d },
+      plains: { sky: 0x56493a, road: 0x78674c, line: 0xb19a71 },
+      flooded: { sky: 0x34494d, road: 0x526467, line: 0x93aaad },
+      mountain: { sky: 0x44464a, road: 0x67696b, line: 0xb3ada0 },
+    };
+    const colors = palette[state.activeZoneId] ?? palette.ruins;
 
     graphics.clear();
-    graphics.fillStyle(0x323a3b, 1);
+    graphics.fillStyle(colors.sky, 1);
     graphics.fillRect(0, 0, width, height);
-    graphics.fillStyle(0x626664, 1);
+    graphics.fillStyle(colors.road, 1);
     graphics.fillRect(0, roadY, width, height * 0.3);
-    graphics.fillStyle(0x95978d, 1);
+    graphics.fillStyle(colors.line, 1);
     graphics.fillRect(0, roadY + height * 0.13, width, height * 0.025);
 
     for (let index = 0; index < 5; index += 1) {
@@ -39,8 +46,25 @@ export class RouteScene extends Phaser.Scene {
     }
 
     const truckX = width * 0.38;
-    graphics.fillStyle(0x9d8b67, 1);
+    const cosmeticColors: Record<string, number> = {
+      "beacon-rust": 0x9d8b67,
+      "beacon-amber": 0xc28b3c,
+      "beacon-sky": 0x729cad,
+      "garland-warm": 0xc69b59,
+      "garland-color": 0xb7696a,
+      "garland-stars": 0xc7c8bb,
+    };
+    graphics.fillStyle(cosmeticColors[state.selectedCosmeticId ?? ""] ?? 0x9d8b67, 1);
     graphics.fillRect(truckX, roadY - height * 0.16, width * 0.17, height * 0.13);
+    if (state.selectedCosmeticId?.startsWith("garland-")) {
+      graphics.lineStyle(2, 0xf3cb7e, 1);
+      graphics.lineBetween(
+        truckX + width * 0.02,
+        roadY - height * 0.16,
+        truckX + width * 0.15,
+        roadY - height * 0.16,
+      );
+    }
     graphics.fillStyle(0x262b2c, 1);
     graphics.fillRect(truckX + width * 0.025, roadY - height * 0.045, width * 0.04, height * 0.05);
     graphics.fillRect(truckX + width * 0.12, roadY - height * 0.045, width * 0.04, height * 0.05);

@@ -105,6 +105,7 @@ h2 {
 .resource-panel {
   padding: 16px 18px;
   margin-bottom: 14px;
+  flex-wrap: wrap;
 }
 
 .resource-panel > div {
@@ -150,6 +151,65 @@ h2 {
   background: #262d30;
 }
 
+.route-controls,
+.mode-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #a4aaa8;
+  font-size: 13px;
+}
+
+.route-controls select {
+  min-width: 190px;
+}
+
+.route-controls select,
+.button-small {
+  border: 1px solid #59615e;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #ece9df;
+  background: #303738;
+}
+
+.button-small {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.button-small.is-selected {
+  border-color: #b8965f;
+  background: #554632;
+}
+
+.game-tabs {
+  display: flex;
+  overflow-x: auto;
+  gap: 7px;
+  margin: 0 0 12px;
+  padding: 2px 0 7px;
+  scrollbar-width: thin;
+}
+
+.game-tabs button {
+  flex: 0 0 auto;
+  border: 1px solid #414a49;
+  border-radius: 9px;
+  padding: 9px 12px;
+  color: #c5cac5;
+  background: #252b2d;
+  cursor: pointer;
+}
+
+.game-tabs button.is-active {
+  border-color: #a88a5b;
+  color: #f0dfbb;
+  background: #40382b;
+}
+
 .route-scene canvas {
   display: block;
   width: 100% !important;
@@ -184,6 +244,91 @@ h2 {
 .tier-list {
   display: grid;
   gap: 9px;
+}
+
+.system-section + .system-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #414a49;
+}
+
+.system-list {
+  display: grid;
+  gap: 8px;
+}
+
+.system-list.is-locked {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.system-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #414a49;
+  border-radius: 10px;
+  padding: 12px;
+  background: #2a3132;
+}
+
+.system-card strong {
+  font-size: 13px;
+}
+
+.system-card p {
+  margin: 5px 0 0;
+}
+
+.system-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.system-card progress {
+  width: min(100%, 300px);
+  height: 7px;
+  margin-top: 8px;
+  accent-color: #be9a63;
+}
+
+.button-stack {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.compact-card {
+  min-height: 60px;
+}
+
+.compact-card.is-complete {
+  border-color: #64734f;
+  background: #2c352d;
+}
+
+.prestige-card {
+  display: grid;
+  justify-items: start;
+  margin-top: 16px;
+  border-color: #806b4c;
+  background: #353126;
+}
+
+.prestige-card p {
+  margin-bottom: 8px;
+}
+
+.leaderboard-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #806b4c;
+  border-radius: 9px;
+  padding: 14px;
+  margin: 12px 0;
+  background: #353126;
 }
 
 .tier-card {
@@ -266,6 +411,19 @@ footer {
 
   .tier-card {
     align-items: flex-start;
+  }
+
+  .system-card {
+    align-items: flex-start;
+  }
+
+  .resource-panel > div {
+    min-width: calc(50% - 8px);
+  }
+
+  .route-controls select {
+    flex: 1;
+    min-width: 130px;
   }
 
   .tier-details {
