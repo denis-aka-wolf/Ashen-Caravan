@@ -21,6 +21,7 @@ import {
 } from "../core/economy.ts";
 import { getPrestigeBlueprintGain } from "../core/progression.ts";
 import type { GameState } from "../core/types.ts";
+import type { LeaderboardEntry } from "../platform/types.ts";
 
 export type GameTab =
   | "route"
@@ -42,6 +43,14 @@ export interface GameUiElements {
   zoneSelect: HTMLSelectElement;
   airshipButton: HTMLButtonElement;
   tabButtons: HTMLButtonElement[];
+}
+
+export interface PlatformUiState {
+  available: boolean;
+  rewardedAdsAvailable: boolean;
+  cloudEnabled: boolean;
+  leaderboardEntries: LeaderboardEntry[] | null;
+  leaderboardName: string;
 }
 
 let activeTab: GameTab = "route";
@@ -71,6 +80,13 @@ export function renderGameUi(
   elements: GameUiElements,
   state: GameState,
   now = new Date(),
+  platform: PlatformUiState = {
+    available: false,
+    rewardedAdsAvailable: false,
+    cloudEnabled: false,
+    leaderboardEntries: null,
+    leaderboardName: "best_navigators",
+  },
 ): void {
   elements.scrapValue.textContent = formatNumber(state.scrap);
   elements.incomeValue.textContent = `${formatNumber(getTotalIncome(state))} / с`;
@@ -88,24 +104,24 @@ export function renderGameUi(
   for (const button of elements.tabButtons) {
     button.classList.toggle("is-active", button.dataset.tab === activeTab);
   }
-  elements.tabView.innerHTML = renderTab(state, now);
+  elements.tabView.innerHTML = renderTab(state, now, platform);
   renderFindingTargets(elements.findingLayer, state);
 }
 
-function renderTab(state: GameState, now: Date): string {
+function renderTab(state: GameState, now: Date, platform: PlatformUiState): string {
   switch (activeTab) {
     case "route":
       return renderRouteTab(state);
     case "upgrades":
       return renderUpgradesTab(state);
     case "orders":
-      return renderOrdersTab(state);
+      return renderOrdersTab(state, platform);
     case "workshop":
       return renderWorkshopTab(state);
     case "rewards":
-      return renderRewardsTab(state, now);
+      return renderRewardsTab(state, now, platform);
     case "leaderboard":
-      return renderLeaderboardTab(state);
+      return renderLeaderboardTab(state, platform);
   }
 }
 
@@ -201,7 +217,10 @@ function renderUpgradesTab(state: GameState): string {
   }).join("");
 }
 
-function renderOrdersTab(state: GameState): string {
+function renderOrdersTab(
+  state: GameState,
+  platform: PlatformUiState,
+): string {
   const timeLeft = Math.max(0, state.nextOrderRefreshAtSeconds - state.clockSeconds);
   return `
     <div class="section-heading"><h2>Просьбы попутчиков</h2><span>Обновление через ${formatDuration(timeLeft)}</span></div>
@@ -221,6 +240,7 @@ function renderOrdersTab(state: GameState): string {
             <div class="button-stack">
               <button class="buy-button" type="button" data-action="claim-request" data-id="${request.id}" ${done ? "" : "disabled"}>Забрать</button>
               <button class="button button-small" type="button" data-action="skip-request" data-id="${request.id}" ${state.tokens < 1 ? "disabled" : ""}>Пропустить · 1 жетон</button>
+              ${platform.rewardedAdsAvailable ? `<button class="button button-small" type="button" data-action="skip-request-ad" data-id="${request.id}">Смотреть рекламу: пропустить и получить ${request.rewardTokens} жет.</button>` : ""}
             </div>
           </article>
         `;
@@ -247,7 +267,11 @@ function renderWorkshopTab(state: GameState): string {
   `;
 }
 
-function renderRewardsTab(state: GameState, now: Date): string {
+function renderRewardsTab(
+  state: GameState,
+  now: Date,
+  platform: PlatformUiState,
+): string {
   const todayClaimed = state.dailyLastClaimDay === now.toISOString().slice(0, 10);
   const dailyIndex = todayClaimed
     ? state.dailyStreak
@@ -286,7 +310,10 @@ function renderRewardsTab(state: GameState, now: Date): string {
     <section class="system-section">
       <div class="section-heading"><h2>Ежедневный бонус · ${dailyIndex + 1}/7</h2><span>${todayClaimed ? "Получен сегодня" : "Тётя Роза приготовила подарок"}</span></div>
       <p class="tier-meta">Награда: ${daily.scrapIncomeMinutes} мин дохода, ${daily.tokens} жетонов${daily.airship ? " и дирижабль" : ""}.</p>
-      <button class="buy-button" type="button" data-action="daily" ${todayClaimed ? "disabled" : ""}>${todayClaimed ? "До завтра" : "Забрать подарок"}</button>
+      <div class="mode-row">
+        <button class="buy-button" type="button" data-action="daily" ${todayClaimed ? "disabled" : ""}>${todayClaimed ? "До завтра" : "Забрать подарок"}</button>
+        ${platform.rewardedAdsAvailable ? `<button class="buy-button" type="button" data-action="daily-x2" ${todayClaimed ? "disabled" : ""}>Смотреть рекламу: ×2 награда</button>` : ""}
+      </div>
     </section>
     <section class="system-section">
       <div class="section-heading"><h2>Достижения</h2><span>${state.completedAchievementIds.length}/${ACHIEVEMENT_CONFIG.length}</span></div>
@@ -303,12 +330,31 @@ function renderRewardsTab(state: GameState, now: Date): string {
   `;
 }
 
-function renderLeaderboardTab(state: GameState): string {
+function renderLeaderboardTab(
+  state: GameState,
+  platform: PlatformUiState,
+): string {
+  const entries = platform.leaderboardEntries?.map((entry) => `
+    <div class="leaderboard-row">
+      <strong>${entry.rank}. ${escapeHtml(entry.publicName || "Навигатор")}</strong>
+      <strong>${formatNumber(entry.score)} ЧР</strong>
+    </div>
+  `).join("");
+  const integrationControls = platform.available
+    ? `
+      <div class="mode-row">
+        <button class="buy-button" type="button" data-action="cloud-sync">${platform.cloudEnabled ? "Синхронизировать облако" : "Подключить облачное сохранение"}</button>
+        <button class="buy-button" type="button" data-action="leaderboard-refresh">Обновить общий топ</button>
+        <button class="buy-button" type="button" data-action="leaderboard-submit">Войти и отправить результат</button>
+      </div>
+    `
+    : `<p class="notice">SDK Яндекс Игр не найден. Локальная игра и сохранение работают без сети.</p>`;
   return `
     <div class="section-heading"><h2>Лучшие навигаторы</h2><span>Всего Чертежей</span></div>
-    <p class="notice">Демонстрационный локальный экран. Для глобальной таблицы нужен подключённый SDK Яндекс Игр и авторизация игрока.</p>
+    <p class="tier-meta">Таблица: ${escapeHtml(platform.leaderboardName)}</p>
     <div class="leaderboard-row"><strong>Вы · этот браузер</strong><strong>${formatNumber(state.blueprintsTotal)} ЧР</strong></div>
-    <p class="tier-meta">После подключения платформы эта панель будет показывать общую таблицу лидеров.</p>
+    ${entries ?? ""}
+    ${integrationControls}
   `;
 }
 
@@ -352,12 +398,24 @@ export function showOfflineNotice(
   element: HTMLElement,
   elapsedSeconds: number,
   creditedScrap: number,
+  canDoubleWithAd = false,
 ): void {
   if (creditedScrap <= 0) {
     return;
   }
-  element.textContent =
+  element.textContent = "";
+  const text = document.createElement("span");
+  text.textContent =
     `Пока караван стоял ${formatDuration(elapsedSeconds)}, он собрал ${formatNumber(creditedScrap)} лома.`;
+  element.append(text);
+  if (canDoubleWithAd) {
+    const button = document.createElement("button");
+    button.className = "buy-button";
+    button.type = "button";
+    button.dataset.action = "offline-double";
+    button.textContent = "Смотреть рекламу: ×2 лом";
+    element.append(button);
+  }
   element.hidden = false;
 }
 
@@ -388,6 +446,19 @@ function currentZoneName(state: GameState): string {
 
 function currentZoneNameById(zoneId: string): string {
   return ZONE_CONFIG.find((zone) => zone.id === zoneId)?.name ?? zoneId;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;",
+    };
+    return entities[character];
+  });
 }
 
 function requireElement<T extends HTMLElement = HTMLElement>(selector: string): T {

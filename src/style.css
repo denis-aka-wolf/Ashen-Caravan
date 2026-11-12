@@ -386,6 +386,13 @@ h2 {
   background: #373a2b;
 }
 
+.offline-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
 .error {
   border: 1px solid #a34a43;
   border-radius: 9px;

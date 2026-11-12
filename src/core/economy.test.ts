@@ -8,6 +8,7 @@ import {
   buyTierBulk,
   buyUpgrade,
   buyTier,
+  getOfflineSettings,
   getMilestoneMultiplier,
   getTierCost,
   getTotalIncome,
@@ -17,6 +18,11 @@ import { calculateOfflineScrap, applyOfflineEarnings } from "./offline.ts";
 import { loadGame, saveGame } from "./save.ts";
 import { createGameState, tickGame, tapFinding } from "./state.ts";
 import { simulateEconomy } from "./simulation.ts";
+import {
+  applyRemoteGameConfig,
+  getRuntimeGameConfig,
+  resetRuntimeGameConfig,
+} from "./runtime-config.ts";
 import type { SaveStorage } from "./save.ts";
 import {
   buyCosmetic,
@@ -26,6 +32,7 @@ import {
   claimRequest,
   getPrestigeBlueprintGain,
   setActiveZone,
+  skipRequestWithReward,
   startNewRun,
   updateProgression,
 } from "./progression.ts";
@@ -238,6 +245,23 @@ describe("offline progress and persistence", () => {
     expect(state.requests).toHaveLength(3);
   });
 
+  it("replaces a request and grants its token reward after an ad", () => {
+    const state = createGameState(0);
+    state.requests = [{
+      id: 99,
+      kind: "find",
+      target: 5,
+      startProgress: 0,
+      progress: 0,
+      rewardTokens: 3,
+      rewardScrap: 15,
+    }];
+    expect(skipRequestWithReward(state, 99).success).toBe(true);
+    expect(state.tokens).toBe(3);
+    expect(state.requests).toHaveLength(1);
+    expect(state.requests.some((request) => request.id === 99)).toBe(false);
+  });
+
   it("claims daily rewards once per UTC day and drops one step after a missed day", () => {
     const state = createGameState(0);
     const first = claimDailyReward(state, new Date("2026-01-01T12:00:00Z"));
@@ -247,6 +271,16 @@ describe("offline progress and persistence", () => {
     expect(state.dailyStreak).toBe(1);
     claimDailyReward(state, new Date("2026-01-04T12:00:00Z"));
     expect(state.dailyStreak).toBe(0);
+  });
+
+  it("doubles the daily reward only when the rewarded-ad path is requested", () => {
+    const state = createGameState(0);
+    state.tiers[0].owned = 1;
+    expect(
+      claimDailyReward(state, new Date("2026-01-01T12:00:00Z"), 2).success,
+    ).toBe(true);
+    expect(state.scrap).toBe(120);
+    expect(state.dailyLastClaimDay).toBe("2026-01-01");
   });
 
   it("grants one of the configured airship rewards while it is visible", () => {
@@ -298,5 +332,88 @@ describe("offline progress and persistence", () => {
     expect(migrated.tiers[0].owned).toBe(4);
     expect(migrated.tiers[7].owned).toBe(0);
     expect(migrated.findsTapped).toBe(7);
+  });
+});
+
+describe("remote game configuration", () => {
+  it("applies validated flags to economy and progression values", () => {
+    resetRuntimeGameConfig();
+    const result = applyRemoteGameConfig({
+      config_schema_version: "1",
+      tier_cost_multiplier: "1.5",
+      tier_income_multiplier: "1.1",
+      offline_cap_hours: "8",
+      offline_efficiency: "0.7",
+      plains_unlock_bikes: "30",
+    });
+
+    expect(result.rejectedFlags).toEqual([]);
+    expect(getRuntimeGameConfig().tierCostMultiplier).toBe(1.5);
+    expect(getRuntimeGameConfig().offlineCapHours).toBe(8);
+    expect(getRuntimeGameConfig().offlineEfficiency).toBe(0.7);
+    expect(getRuntimeGameConfig().plainsUnlockBikes).toBe(30);
+    expect(getTierCost(1, 0)).toBe(15);
+    const state = createGameState(0);
+    state.tiers[0].owned = 1;
+    expect(getTotalIncome(state)).toBeCloseTo(0.55);
+    expect(getOfflineSettings(state)).toEqual({
+      capSeconds: 8 * 60 * 60,
+      efficiency: 0.7,
+    });
+    state.tiers[1].owned = 29;
+    updateProgression(state);
+    expect(state.unlockedZones).not.toContain("plains");
+    state.tiers[1].owned = 30;
+    updateProgression(state);
+    expect(state.unlockedZones).toContain("plains");
+    resetRuntimeGameConfig();
+  });
+
+  it("rejects out-of-range values and falls back to safe defaults", () => {
+    resetRuntimeGameConfig();
+    const result = applyRemoteGameConfig({
+      offline_cap_hours: "1000",
+      offline_efficiency: "NaN",
+      tier_income_multiplier: "0",
+    });
+
+    expect(result.rejectedFlags).toEqual([
+      "tier_income_multiplier",
+      "offline_cap_hours",
+      "offline_efficiency",
+    ]);
+    expect(getRuntimeGameConfig().offlineCapHours).toBe(4);
+    expect(getRuntimeGameConfig().offlineEfficiency).toBe(0.5);
+    expect(getRuntimeGameConfig().tierIncomeMultiplier).toBe(1);
+    resetRuntimeGameConfig();
+  });
+
+  it("rejects fractional values for integer progression settings", () => {
+    resetRuntimeGameConfig();
+    const result = applyRemoteGameConfig({
+      plains_unlock_bikes: "25.5",
+      order_refresh_seconds: "75.5",
+    });
+
+    expect(result.rejectedFlags).toEqual([
+      "plains_unlock_bikes",
+      "order_refresh_seconds",
+    ]);
+    expect(getRuntimeGameConfig().plainsUnlockBikes).toBe(25);
+    expect(getRuntimeGameConfig().orderRefreshSeconds).toBe(600);
+    resetRuntimeGameConfig();
+  });
+
+  it("rejects incompatible schema versions without replacing the active config", () => {
+    resetRuntimeGameConfig();
+    applyRemoteGameConfig({ offline_cap_hours: "8" });
+    const result = applyRemoteGameConfig({
+      config_schema_version: "2",
+      offline_cap_hours: "10",
+    });
+
+    expect(result.rejectedFlags).toEqual(["config_schema_version"]);
+    expect(getRuntimeGameConfig().offlineCapHours).toBe(8);
+    resetRuntimeGameConfig();
   });
 });

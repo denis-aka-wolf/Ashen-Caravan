@@ -3,6 +3,7 @@ import {
   TIER_CONFIG,
   UPGRADE_CONFIG,
 } from "./config.ts";
+import { getRuntimeGameConfig } from "./runtime-config.ts";
 import type { GameState, TierConfig } from "./types.ts";
 
 export function getTierConfig(tierId: number): TierConfig {
@@ -15,7 +16,7 @@ export function getTierConfig(tierId: number): TierConfig {
 
 export function getTierCost(tierId: number, owned: number): number {
   const tier = getTierConfig(tierId);
-  return tier.baseCost * tier.growth ** owned;
+  return tier.baseCost * tier.growth ** owned * getRuntimeGameConfig().tierCostMultiplier;
 }
 
 export function getMilestoneMultiplier(owned: number): number {
@@ -33,7 +34,13 @@ export function getTierIncome(
     .filter((upgrade) => upgrade.category === "tier" && upgrade.tierId === tierId)
     .filter((upgrade) => purchasedUpgradeIds.includes(upgrade.id))
     .reduce((multiplier, upgrade) => multiplier * (upgrade.multiplier ?? 1), 1);
-  return owned * tier.baseIncome * getMilestoneMultiplier(owned) * tierUpgrade;
+  return (
+    owned *
+    tier.baseIncome *
+    getMilestoneMultiplier(owned) *
+    tierUpgrade *
+    getRuntimeGameConfig().tierIncomeMultiplier
+  );
 }
 
 export function getTotalIncome(state: GameState): number {
@@ -181,8 +188,14 @@ export function getOfflineSettings(state: GameState): { capSeconds: number; effi
   const talentCap = (state.talentLevels["camp-cap"] ?? 0) * 2 * 60 * 60;
   const talentEfficiency = (state.talentLevels["camp-efficiency"] ?? 0) * 0.1;
   return {
-    capSeconds: Math.min(12 * 60 * 60, 4 * 60 * 60 + talentCap + upgradeCap),
-    efficiency: Math.min(0.8, 0.5 + upgradeEfficiency + talentEfficiency),
+    capSeconds: Math.min(
+      12 * 60 * 60,
+      getRuntimeGameConfig().offlineCapHours * 60 * 60 + talentCap + upgradeCap,
+    ),
+    efficiency: Math.min(
+      0.8,
+      getRuntimeGameConfig().offlineEfficiency + upgradeEfficiency + talentEfficiency,
+    ),
   };
 }
 

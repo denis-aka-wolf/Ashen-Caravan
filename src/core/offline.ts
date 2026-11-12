@@ -1,5 +1,6 @@
-import { OFFLINE_CAP_SECONDS, OFFLINE_EFFICIENCY, OFFLINE_MINIMUM_SECONDS } from "./config.ts";
+import { OFFLINE_MINIMUM_SECONDS } from "./config.ts";
 import { addScrap, getOfflineSettings, getTotalIncome } from "./economy.ts";
+import { getRuntimeGameConfig } from "./runtime-config.ts";
 import type { GameState } from "./types.ts";
 import { updateProgression } from "./progression.ts";
 
@@ -11,8 +12,8 @@ export interface OfflineResult {
 export function calculateOfflineScrap(
   incomePerSecond: number,
   elapsedSeconds: number,
-  capSeconds = OFFLINE_CAP_SECONDS,
-  efficiency = OFFLINE_EFFICIENCY,
+  capSeconds = getRuntimeGameConfig().offlineCapHours * 60 * 60,
+  efficiency = getRuntimeGameConfig().offlineEfficiency,
 ): number {
   if (
     !Number.isFinite(incomePerSecond) ||

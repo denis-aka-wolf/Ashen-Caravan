@@ -4,12 +4,12 @@ import {
   AIRSHIP_VISIBLE_SECONDS,
   FIND_MAX_INTERVAL_SECONDS,
   FIND_MIN_INTERVAL_SECONDS,
-  ORDER_REFRESH_SECONDS,
   RADIO_RECORDS,
   TALENT_CONFIG,
   TIER_CONFIG,
 } from "./config.ts";
 import { addScrap, getFindPower, getTotalIncome } from "./economy.ts";
+import { getRuntimeGameConfig } from "./runtime-config.ts";
 import type { Finding, GameState } from "./types.ts";
 import { refreshRequests, updateProgression } from "./progression.ts";
 
@@ -34,7 +34,7 @@ export function createGameState(nowMs = Date.now()): GameState {
     completedAchievementIds: [],
     requests: [],
     nextRequestId: 1,
-    nextOrderRefreshAtSeconds: ORDER_REFRESH_SECONDS,
+    nextOrderRefreshAtSeconds: getRuntimeGameConfig().orderRefreshSeconds,
     ordersCompleted: 0,
     findsTapped: 0,
     airshipNextAtSeconds: randomAirshipDelay(Math.random),
@@ -108,7 +108,8 @@ export function tickGame(
   if (state.clockSeconds >= state.nextOrderRefreshAtSeconds) {
     state.requests = state.requests.filter((request) => request.progress >= request.target);
     refreshRequests(state, random);
-    state.nextOrderRefreshAtSeconds = state.clockSeconds + ORDER_REFRESH_SECONDS;
+    state.nextOrderRefreshAtSeconds =
+      state.clockSeconds + getRuntimeGameConfig().orderRefreshSeconds;
   }
   updateProgression(state);
 }
@@ -165,7 +166,9 @@ function randomFindDelay(
   const findUpgradeCount = state?.purchasedUpgradeIds.filter((id) =>
     id.startsWith("find-"),
   ).length ?? 0;
-  const factor = 1 + findUpgradeCount * 0.1;
+  const factor =
+    (1 + findUpgradeCount * 0.1) *
+    getRuntimeGameConfig().findFrequencyMultiplier;
   return (
     FIND_MIN_INTERVAL_SECONDS / factor +
     (random() * (FIND_MAX_INTERVAL_SECONDS - FIND_MIN_INTERVAL_SECONDS)) / factor
@@ -174,10 +177,12 @@ function randomFindDelay(
 
 function randomAirshipDelay(random: () => number, state?: GameState): number {
   const frequency = 1 + (state?.talentLevels["luck-airship"] ?? 0) * 0.1;
+  const configuredFrequency =
+    frequency * getRuntimeGameConfig().airshipFrequencyMultiplier;
   return (
     AIRSHIP_REWARD_INTERVAL_MIN_SECONDS +
     random() *
       (AIRSHIP_REWARD_INTERVAL_MAX_SECONDS -
         AIRSHIP_REWARD_INTERVAL_MIN_SECONDS)
-  ) / frequency;
+  ) / configuredFrequency;
 }

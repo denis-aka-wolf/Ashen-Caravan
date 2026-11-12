@@ -5,7 +5,6 @@ import {
   DAILY_REWARDS,
   ORDER_SLOT_COUNT,
   PRESTIGE_MIN_BLUEPRINTS,
-  PRESTIGE_SCRAP_PER_BLUEPRINT_SQUARED,
   RADIO_RECORDS,
   TALENT_CONFIG,
   TIER_CONFIG,
@@ -15,6 +14,7 @@ import {
   addScrap,
   getTotalIncome,
 } from "./economy.ts";
+import { getRuntimeGameConfig } from "./runtime-config.ts";
 import type { GameActionResult, GameState, RequestState } from "./types.ts";
 
 export function updateProgression(state: GameState): void {
@@ -25,11 +25,11 @@ export function updateProgression(state: GameState): void {
 
     const unlocked =
       zone.id === "plains"
-        ? (state.tiers[1]?.owned ?? 0) >= 25
+        ? (state.tiers[1]?.owned ?? 0) >= getRuntimeGameConfig().plainsUnlockBikes
         : zone.id === "flooded"
-          ? state.runScrapEarned >= 1_000_000
+          ? state.runScrapEarned >= getRuntimeGameConfig().floodedUnlockScrap
           : zone.id === "mountain"
-            ? state.runScrapEarned >= 100_000_000
+            ? state.runScrapEarned >= getRuntimeGameConfig().mountainUnlockScrap
             : false;
     if (unlocked) {
       state.unlockedZones.push(zone.id);
@@ -64,7 +64,10 @@ export function setActiveZone(state: GameState, zoneId: string): GameActionResul
 
 export function getPrestigeBlueprintGain(state: GameState): number {
   return Math.floor(
-    Math.sqrt(state.runScrapEarned / PRESTIGE_SCRAP_PER_BLUEPRINT_SQUARED),
+    Math.sqrt(
+      state.runScrapEarned /
+        getRuntimeGameConfig().prestigeScrapPerBlueprintSquared,
+    ),
   );
 }
 
@@ -103,11 +106,14 @@ export function startNewRun(
   state.incomeBoostUntilSeconds = 0;
   state.incomeBoostMultiplier = 1;
   state.airshipExpiresAtSeconds = 0;
-  const airshipFrequency = 1 + (state.talentLevels["luck-airship"] ?? 0) * 0.1;
+  const airshipFrequency =
+    (1 + (state.talentLevels["luck-airship"] ?? 0) * 0.1) *
+    getRuntimeGameConfig().airshipFrequencyMultiplier;
   state.airshipNextAtSeconds = (60 + Math.random() * 60) / airshipFrequency;
   state.nextFindingId = 1;
   state.nextFindAtSeconds = 4 + Math.random() * 3;
-  state.nextOrderRefreshAtSeconds = 600;
+  state.nextOrderRefreshAtSeconds =
+    getRuntimeGameConfig().orderRefreshSeconds;
   state.requests = [];
   refreshRequests(state, Math.random);
   unlockRadioForPrestige(state);
@@ -189,6 +195,23 @@ export function skipRequest(
   return { success: true, message: "Просьба заменена." };
 }
 
+export function skipRequestWithReward(
+  state: GameState,
+  requestId: number,
+): GameActionResult {
+  const index = state.requests.findIndex((request) => request.id === requestId);
+  if (index < 0) {
+    return { success: false, message: "Просьба уже недоступна." };
+  }
+  const rewardTokens = state.requests[index].rewardTokens;
+  state.tokens += rewardTokens;
+  state.requests[index] = createRequest(state, Math.random);
+  return {
+    success: true,
+    message: `Просьба пропущена. Получено жетонов: ${rewardTokens}.`,
+  };
+}
+
 export function buyCosmetic(
   state: GameState,
   cosmeticId: string,
@@ -213,7 +236,11 @@ export function buyCosmetic(
 export function claimDailyReward(
   state: GameState,
   now = new Date(),
+  multiplier: 1 | 2 = 1,
 ): GameActionResult {
+  if (multiplier !== 1 && multiplier !== 2) {
+    throw new RangeError("Daily reward multiplier must be 1 or 2.");
+  }
   const today = toUtcDay(now);
   if (state.dailyLastClaimDay === today) {
     return { success: false, message: "Ежедневный бонус уже получен сегодня." };
@@ -233,8 +260,11 @@ export function claimDailyReward(
       : Math.max(0, state.dailyStreak - 1);
 
   const reward = DAILY_REWARDS[state.dailyStreak];
-  addScrap(state, getTotalIncome(state) * reward.scrapIncomeMinutes * 60);
-  state.tokens += reward.tokens;
+  addScrap(
+    state,
+    getTotalIncome(state) * reward.scrapIncomeMinutes * 60 * multiplier,
+  );
+  state.tokens += reward.tokens * multiplier;
   if (reward.airship) {
     state.airshipExpiresAtSeconds = Math.max(
       state.airshipExpiresAtSeconds,
@@ -245,7 +275,7 @@ export function claimDailyReward(
   updateProgression(state);
   return {
     success: true,
-    message: `Бонус ${state.dailyStreak + 1}/7 получен: +${reward.tokens} жетонов.`,
+    message: `Бонус ${state.dailyStreak + 1}/7 получен: +${reward.tokens * multiplier} жетонов.`,
   };
 }
 
