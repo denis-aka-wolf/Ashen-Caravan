@@ -17,6 +17,7 @@ import {
   setActiveZone,
   skipRequest,
   startNewRun,
+  transitionToNextZone,
   updateProgression,
 } from "./core/progression.ts";
 import { loadGame, resetGame, saveGame } from "./core/save.ts";
@@ -324,11 +325,26 @@ async function startGame(): Promise<void> {
   });
 
   elements.zoneSelect.addEventListener("change", () => {
+    elements.visitZoneButton.hidden =
+      elements.zoneSelect.value === state.activeZoneId;
+    const zoneName =
+      elements.zoneSelect.selectedOptions[0]?.textContent ?? "зону";
+    elements.visitZoneButton.textContent = `Перейти в «${zoneName}»`;
+  });
+
+  elements.visitZoneButton.addEventListener("click", () => {
     const result = setActiveZone(state, elements.zoneSelect.value);
-    if (!result.success) {
-      showActionNotice(actionNotice, result.message);
-    }
+    showActionNotice(actionNotice, result.message);
     saveGame(window.localStorage, state, currentTime());
+    render();
+    routeScene.renderState(state);
+  });
+
+  elements.advanceZoneButton.addEventListener("click", () => {
+    const result = transitionToNextZone(state);
+    showActionNotice(actionNotice, result.message);
+    saveGame(window.localStorage, state, currentTime());
+    render();
     routeScene.renderState(state);
   });
 

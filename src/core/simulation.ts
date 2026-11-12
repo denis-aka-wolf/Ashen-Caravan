@@ -1,5 +1,9 @@
 import { TIER_CONFIG } from "./config.ts";
 import { buyTier, getTierCost, getTotalIncome, isTierUnlocked } from "./economy.ts";
+import {
+  getZoneTransitionProgress,
+  transitionToNextZone,
+} from "./progression.ts";
 import { tapFinding, tickGame } from "./state.ts";
 import type { GameState } from "./types.ts";
 
@@ -54,6 +58,23 @@ export function simulateEconomy(
     const step = Math.min(stepSeconds, options.durationSeconds - state.clockSeconds);
     tickGame(state, step, random);
     const income = getTotalIncome(state);
+
+    while (true) {
+      const route = getZoneTransitionProgress(state);
+      if (!route.zone || !route.canTransition) {
+        break;
+      }
+      const transition = transitionToNextZone(state);
+      if (!transition.success) {
+        throw new Error(transition.message);
+      }
+      milestones.push({
+        label: `Переход: ${route.zone.name}`,
+        elapsedSeconds: state.clockSeconds,
+        scrap: state.scrap,
+        incomePerSecond: getTotalIncome(state),
+      });
+    }
 
     while (state.clockSeconds >= nextTapAt) {
       const finding = state.finds[0];

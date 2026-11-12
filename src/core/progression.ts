@@ -18,25 +18,6 @@ import { getRuntimeGameConfig } from "./runtime-config.ts";
 import type { GameActionResult, GameState, RequestState } from "./types.ts";
 
 export function updateProgression(state: GameState): void {
-  for (const zone of ZONE_CONFIG) {
-    if (state.unlockedZones.includes(zone.id)) {
-      continue;
-    }
-
-    const unlocked =
-      zone.id === "plains"
-        ? (state.tiers[1]?.owned ?? 0) >= getRuntimeGameConfig().plainsUnlockBikes
-        : zone.id === "flooded"
-          ? state.runScrapEarned >= getRuntimeGameConfig().floodedUnlockScrap
-          : zone.id === "mountain"
-            ? state.runScrapEarned >= getRuntimeGameConfig().mountainUnlockScrap
-            : false;
-    if (unlocked) {
-      state.unlockedZones.push(zone.id);
-      unlockRadioForZone(state, zone.id);
-    }
-  }
-
   for (const request of state.requests) {
     const current = getRequestMetric(state, request);
     request.progress = Math.max(0, current - request.startProgress);
@@ -51,6 +32,66 @@ export function updateProgression(state: GameState): void {
       state.tokens += achievement.reward;
     }
   }
+}
+
+export interface ZoneTransitionProgress {
+  zone: (typeof ZONE_CONFIG)[number] | null;
+  income: number;
+  threshold: number;
+  progress: number;
+  canTransition: boolean;
+}
+
+export function getZoneTransitionProgress(
+  state: GameState,
+): ZoneTransitionProgress {
+  const zone = ZONE_CONFIG.find(
+    (entry) => !state.unlockedZones.includes(entry.id),
+  ) ?? null;
+  if (!zone) {
+    return {
+      zone: null,
+      income: getTotalIncome(state),
+      threshold: 0,
+      progress: 1,
+      canTransition: false,
+    };
+  }
+  const config = getRuntimeGameConfig();
+  const threshold =
+    zone.id === "plains"
+      ? config.plainsUnlockIncome
+      : zone.id === "flooded"
+        ? config.floodedUnlockIncome
+        : config.mountainUnlockIncome;
+  const income = getTotalIncome(state);
+  return {
+    zone,
+    income,
+    threshold,
+    progress: Math.min(1, income / threshold),
+    canTransition: income >= threshold,
+  };
+}
+
+export function transitionToNextZone(state: GameState): GameActionResult {
+  const progress = getZoneTransitionProgress(state);
+  if (!progress.zone) {
+    return { success: false, message: "Новых зон на маршруте больше нет." };
+  }
+  if (!progress.canTransition) {
+    return {
+      success: false,
+      message: `Для перехода в зону «${progress.zone.name}» нужен доход ${progress.threshold} лома/с.`,
+    };
+  }
+  state.unlockedZones.push(progress.zone.id);
+  state.activeZoneId = progress.zone.id;
+  unlockRadioForZone(state, progress.zone.id);
+  return {
+    success: true,
+    message: `Караван прибыл в зону «${progress.zone.name}».`,
+  };
 }
 
 export function setActiveZone(state: GameState, zoneId: string): GameActionResult {

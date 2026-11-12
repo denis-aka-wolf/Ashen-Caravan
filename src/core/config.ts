@@ -12,10 +12,10 @@ export const TIER_CONFIG: readonly TierConfig[] = [
 ];
 
 export const ZONE_CONFIG = [
-  { id: "ruins", name: "Руины города", unlockText: "Стартовая зона", firstTier: 1, lastTier: 2 },
-  { id: "plains", name: "Пыльная равнина", unlockText: "Купить 25 велосипедов-сборщиков", firstTier: 3, lastTier: 4 },
-  { id: "flooded", name: "Затопленное шоссе", unlockText: "Собрать 1 млн лома за перегон", firstTier: 5, lastTier: 6 },
-  { id: "mountain", name: "Горный перевал", unlockText: "Собрать 100 млн лома за перегон", firstTier: 7, lastTier: 8 },
+  { id: "ruins", name: "Руины города", firstTier: 1, lastTier: 2 },
+  { id: "plains", name: "Пыльная равнина", firstTier: 3, lastTier: 4 },
+  { id: "flooded", name: "Затопленное шоссе", firstTier: 5, lastTier: 6 },
+  { id: "mountain", name: "Горный перевал", firstTier: 7, lastTier: 8 },
 ] as const;
 
 export const MILESTONE_COUNTS = [10, 25, 50, 100, 200, 300, 400, 500] as const;

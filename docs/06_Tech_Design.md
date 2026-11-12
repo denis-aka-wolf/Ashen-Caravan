@@ -99,7 +99,7 @@ src/
 - Для каждого параметра задаются тип, значение по умолчанию, безопасный диапазон и версия схемы. Некорректные, нестроковые или выходящие за диапазон значения отклоняются с записью ошибки; игра оставляет последнее валидное значение или использует встроенное значение по умолчанию.
 - Конфигурация не исполняет удалённый код и не меняет структуру сохранения. Несовместимая версия схемы игнорируется.
 - Конфиг загружается при запуске; игровой цикл не зависит от доступности сети. Экономические изменения не меняют формат сохранения.
-- Схема 1: `tier_cost_multiplier` (0.5–2), `tier_income_multiplier` (0.5–2), `offline_cap_hours` (1–12), `offline_efficiency` (0.3–0.8), `prestige_scrap_per_blueprint_squared` (1 млн–1 млрд), `find_frequency_multiplier` (0.5–2), `airship_frequency_multiplier` (0.5–2), `plains_unlock_bikes` (10–100), `flooded_unlock_scrap` (100 тыс.–100 млн), `mountain_unlock_scrap` (10 млн–1 млрд), `order_refresh_seconds` (60–3600).
+- Схема 2: `tier_cost_multiplier` (0.5–2), `tier_income_multiplier` (0.5–2), `offline_cap_hours` (1–12), `offline_efficiency` (0.3–0.8), `prestige_scrap_per_blueprint_squared` (1 млн–1 млрд), `find_frequency_multiplier` (0.5–2), `airship_frequency_multiplier` (0.5–2), `plains_unlock_income` (1 тыс.–1 трлн лома/с), `flooded_unlock_income` (100 тыс.–10 трлн лома/с), `mountain_unlock_income` (1 млн–1 квадриллион лома/с), `order_refresh_seconds` (60–3600). Пороги дохода должны строго возрастать в порядке зон; несовместимые значения отклоняются.
 
 ## 5. Сохранения
 

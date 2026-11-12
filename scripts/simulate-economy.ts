@@ -16,7 +16,7 @@ const result = simulateEconomy(createGameState(0), {
 });
 
 console.log(`Симуляция: ${hours} ч, находка собирается раз в ${findTapInterval} с`);
-console.log("Цели прогрессии:");
+console.log("Цели прогрессии и маршрута:");
 for (const milestone of result.milestones) {
   console.log(
     `- ${milestone.label}: ${formatDuration(milestone.elapsedSeconds)}, ` +

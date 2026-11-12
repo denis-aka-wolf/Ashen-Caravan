@@ -7,14 +7,14 @@ export interface RuntimeGameConfig {
   prestigeScrapPerBlueprintSquared: number;
   findFrequencyMultiplier: number;
   airshipFrequencyMultiplier: number;
-  plainsUnlockBikes: number;
-  floodedUnlockScrap: number;
-  mountainUnlockScrap: number;
+  plainsUnlockIncome: number;
+  floodedUnlockIncome: number;
+  mountainUnlockIncome: number;
   orderRefreshSeconds: number;
 }
 
 export const DEFAULT_RUNTIME_CONFIG: RuntimeGameConfig = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   tierCostMultiplier: 1,
   tierIncomeMultiplier: 1,
   offlineCapHours: 4,
@@ -22,9 +22,9 @@ export const DEFAULT_RUNTIME_CONFIG: RuntimeGameConfig = {
   prestigeScrapPerBlueprintSquared: 10_000_000,
   findFrequencyMultiplier: 1,
   airshipFrequencyMultiplier: 1,
-  plainsUnlockBikes: 25,
-  floodedUnlockScrap: 1_000_000,
-  mountainUnlockScrap: 100_000_000,
+  plainsUnlockIncome: 10_000,
+  floodedUnlockIncome: 10_000_000,
+  mountainUnlockIncome: 100_000_000_000,
   orderRefreshSeconds: 600,
 };
 
@@ -38,9 +38,9 @@ const REMOTE_SETTINGS: Record<NumericSetting, { min: number; max: number }> = {
   prestigeScrapPerBlueprintSquared: { min: 1_000_000, max: 1_000_000_000 },
   findFrequencyMultiplier: { min: 0.5, max: 2 },
   airshipFrequencyMultiplier: { min: 0.5, max: 2 },
-  plainsUnlockBikes: { min: 10, max: 100 },
-  floodedUnlockScrap: { min: 100_000, max: 100_000_000 },
-  mountainUnlockScrap: { min: 10_000_000, max: 1_000_000_000 },
+  plainsUnlockIncome: { min: 1_000, max: 1_000_000_000_000 },
+  floodedUnlockIncome: { min: 100_000, max: 10_000_000_000_000 },
+  mountainUnlockIncome: { min: 1_000_000, max: 1_000_000_000_000_000 },
   orderRefreshSeconds: { min: 60, max: 3600 },
 };
 
@@ -52,17 +52,17 @@ const REMOTE_FLAG_NAMES: Record<NumericSetting, string> = {
   prestigeScrapPerBlueprintSquared: "prestige_scrap_per_blueprint_squared",
   findFrequencyMultiplier: "find_frequency_multiplier",
   airshipFrequencyMultiplier: "airship_frequency_multiplier",
-  plainsUnlockBikes: "plains_unlock_bikes",
-  floodedUnlockScrap: "flooded_unlock_scrap",
-  mountainUnlockScrap: "mountain_unlock_scrap",
+  plainsUnlockIncome: "plains_unlock_income",
+  floodedUnlockIncome: "flooded_unlock_income",
+  mountainUnlockIncome: "mountain_unlock_income",
   orderRefreshSeconds: "order_refresh_seconds",
 };
 
 const INTEGER_SETTINGS = new Set<NumericSetting>([
   "prestigeScrapPerBlueprintSquared",
-  "plainsUnlockBikes",
-  "floodedUnlockScrap",
-  "mountainUnlockScrap",
+  "plainsUnlockIncome",
+  "floodedUnlockIncome",
+  "mountainUnlockIncome",
   "orderRefreshSeconds",
 ]);
 
@@ -117,6 +117,22 @@ export function applyRemoteGameConfig(
       continue;
     }
     next[setting] = value;
+  }
+
+  if (
+    next.plainsUnlockIncome >= next.floodedUnlockIncome ||
+    next.floodedUnlockIncome >= next.mountainUnlockIncome
+  ) {
+    for (const setting of [
+      "plainsUnlockIncome",
+      "floodedUnlockIncome",
+      "mountainUnlockIncome",
+    ] as const) {
+      if (next[setting] !== activeConfig[setting]) {
+        rejectedFlags.push(REMOTE_FLAG_NAMES[setting]);
+        next[setting] = activeConfig[setting];
+      }
+    }
   }
 
   activeConfig = next;

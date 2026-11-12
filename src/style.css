@@ -166,6 +166,48 @@ h2 {
   min-width: 190px;
 }
 
+.route-progress {
+  display: grid;
+  gap: 7px;
+  margin: 0 0 12px;
+}
+
+.route-progress-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #c5cac5;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.route-progress-track {
+  position: relative;
+  height: 12px;
+  margin: 0 12px;
+  border: 1px solid #59615e;
+  border-radius: 999px;
+  background: #202627;
+}
+
+.route-progress-fill {
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #796345, #c8a667);
+  transition: width 180ms ease-out;
+}
+
+.route-caravan {
+  position: absolute;
+  top: 50%;
+  left: var(--route-progress);
+  transform: translate(-50%, -60%);
+  font-size: 20px;
+  line-height: 1;
+  transition: left 180ms ease-out;
+}
+
 .route-controls select,
 .button-small {
   border: 1px solid #59615e;

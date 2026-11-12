@@ -34,6 +34,8 @@ import {
   setActiveZone,
   skipRequestWithReward,
   startNewRun,
+  getZoneTransitionProgress,
+  transitionToNextZone,
   updateProgression,
 } from "./progression.ts";
 
@@ -84,6 +86,18 @@ describe("economy", () => {
     expect(setActiveZone(state, "plains").success).toBe(true);
     state.tiers[1].owned = 10;
     expect(isTierUnlocked(state, 3)).toBe(true);
+  });
+
+  it("uses income progress and requires an explicit action to enter the next zone", () => {
+    const state = createGameState(0);
+    state.tiers[0].owned = 5_000;
+    updateProgression(state);
+
+    expect(state.unlockedZones).toEqual(["ruins"]);
+    expect(getZoneTransitionProgress(state).canTransition).toBe(true);
+    expect(transitionToNextZone(state).success).toBe(true);
+    expect(state.unlockedZones).toEqual(["ruins", "plains"]);
+    expect(state.activeZoneId).toBe("plains");
   });
 
   it("applies permanent upgrade multipliers and charges once", () => {
@@ -339,19 +353,21 @@ describe("remote game configuration", () => {
   it("applies validated flags to economy and progression values", () => {
     resetRuntimeGameConfig();
     const result = applyRemoteGameConfig({
-      config_schema_version: "1",
+      config_schema_version: "2",
       tier_cost_multiplier: "1.5",
       tier_income_multiplier: "1.1",
       offline_cap_hours: "8",
       offline_efficiency: "0.7",
-      plains_unlock_bikes: "30",
+      plains_unlock_income: "100000",
+      flooded_unlock_income: "10000000",
+      mountain_unlock_income: "100000000000",
     });
 
     expect(result.rejectedFlags).toEqual([]);
     expect(getRuntimeGameConfig().tierCostMultiplier).toBe(1.5);
     expect(getRuntimeGameConfig().offlineCapHours).toBe(8);
     expect(getRuntimeGameConfig().offlineEfficiency).toBe(0.7);
-    expect(getRuntimeGameConfig().plainsUnlockBikes).toBe(30);
+    expect(getRuntimeGameConfig().plainsUnlockIncome).toBe(100_000);
     expect(getTierCost(1, 0)).toBe(15);
     const state = createGameState(0);
     state.tiers[0].owned = 1;
@@ -360,11 +376,10 @@ describe("remote game configuration", () => {
       capSeconds: 8 * 60 * 60,
       efficiency: 0.7,
     });
-    state.tiers[1].owned = 29;
+    state.tiers[0].owned = 5_000;
     updateProgression(state);
     expect(state.unlockedZones).not.toContain("plains");
-    state.tiers[1].owned = 30;
-    updateProgression(state);
+    expect(transitionToNextZone(state).success).toBe(true);
     expect(state.unlockedZones).toContain("plains");
     resetRuntimeGameConfig();
   });
@@ -391,15 +406,15 @@ describe("remote game configuration", () => {
   it("rejects fractional values for integer progression settings", () => {
     resetRuntimeGameConfig();
     const result = applyRemoteGameConfig({
-      plains_unlock_bikes: "25.5",
+      plains_unlock_income: "1000.5",
       order_refresh_seconds: "75.5",
     });
 
     expect(result.rejectedFlags).toEqual([
-      "plains_unlock_bikes",
+      "plains_unlock_income",
       "order_refresh_seconds",
     ]);
-    expect(getRuntimeGameConfig().plainsUnlockBikes).toBe(25);
+    expect(getRuntimeGameConfig().plainsUnlockIncome).toBe(10_000);
     expect(getRuntimeGameConfig().orderRefreshSeconds).toBe(600);
     resetRuntimeGameConfig();
   });
@@ -408,12 +423,30 @@ describe("remote game configuration", () => {
     resetRuntimeGameConfig();
     applyRemoteGameConfig({ offline_cap_hours: "8" });
     const result = applyRemoteGameConfig({
-      config_schema_version: "2",
+      config_schema_version: "3",
       offline_cap_hours: "10",
     });
 
     expect(result.rejectedFlags).toEqual(["config_schema_version"]);
     expect(getRuntimeGameConfig().offlineCapHours).toBe(8);
+    resetRuntimeGameConfig();
+  });
+
+  it("rejects route thresholds that are not in increasing order", () => {
+    resetRuntimeGameConfig();
+    const result = applyRemoteGameConfig({
+      config_schema_version: "2",
+      plains_unlock_income: "10000000",
+      flooded_unlock_income: "1000000",
+      mountain_unlock_income: "100000000000",
+    });
+
+    expect(result.rejectedFlags).toEqual([
+      "plains_unlock_income",
+      "flooded_unlock_income",
+    ]);
+    expect(getRuntimeGameConfig().plainsUnlockIncome).toBe(10_000);
+    expect(getRuntimeGameConfig().floodedUnlockIncome).toBe(10_000_000);
     resetRuntimeGameConfig();
   });
 });
