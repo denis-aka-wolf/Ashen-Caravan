@@ -177,8 +177,8 @@ function renderRouteTab(state: GameState): string {
     </div>
     <div class="tier-list">${tierCards}</div>
     <div class="system-card prestige-card">
-      <div class="section-heading"><h3>Новый перегон</h3><span>${prestigeGain} ЧР сейчас</span></div>
-      <p class="tier-meta">Требуется не меньше 5 ЧР. Сбросится лом, техника, улучшения и открытые зоны. Сохранятся Чертежи, таланты, жетоны, достижения и записи радио.</p>
+      <div class="section-heading"><h3>Новый перегон</h3><span>Награда: +${prestigeGain} ЧР</span></div>
+      <p class="tier-meta">ЧР — Чертежи, постоянная валюта для талантов. Сейчас в запасе: ${formatNumber(state.blueprints)}. Награда за этот перегон начислится только после нажатия кнопки. Сбросятся лом, техника, улучшения и открытые зоны; Чертежи, таланты, жетоны, достижения и записи радио сохранятся.</p>
       <button class="buy-button" type="button" data-action="prestige" ${prestigeGain < 5 ? "disabled" : ""}>Начать новый перегон</button>
     </div>
     <p class="tier-meta">Офлайн: ${Math.round(offline.efficiency * 100)}% · лимит ${offline.capSeconds / 3600} ч</p>
