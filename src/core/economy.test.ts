@@ -98,6 +98,8 @@ describe("economy", () => {
     expect(transitionToNextZone(state).success).toBe(true);
     expect(state.unlockedZones).toEqual(["ruins", "plains"]);
     expect(state.activeZoneId).toBe("plains");
+    expect(setActiveZone(state, "ruins").success).toBe(false);
+    expect(state.activeZoneId).toBe("plains");
   });
 
   it("applies permanent upgrade multipliers and charges once", () => {

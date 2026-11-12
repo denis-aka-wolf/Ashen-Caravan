@@ -99,6 +99,15 @@ export function setActiveZone(state: GameState, zoneId: string): GameActionResul
   if (!zone || !state.unlockedZones.includes(zoneId)) {
     return { success: false, message: "Эта зона маршрута ещё закрыта." };
   }
+  const currentZoneIndex = ZONE_CONFIG.findIndex(
+    (entry) => entry.id === state.activeZoneId,
+  );
+  if (ZONE_CONFIG.indexOf(zone) < currentZoneIndex) {
+    return {
+      success: false,
+      message: "Караван не может вернуться в предыдущую зону.",
+    };
+  }
   state.activeZoneId = zoneId;
   return { success: true, message: `Караван прибыл: ${zone.name}.` };
 }

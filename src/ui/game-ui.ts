@@ -393,7 +393,10 @@ function renderZoneJourney(elements: GameUiElements, state: GameState): void {
     const isUnlocked = state.unlockedZones.includes(zone.id);
     const isCurrent = state.activeZoneId === zone.id;
     const isNext = index === unlockedCount;
-    stop.disabled = !isUnlocked;
+    const isBehind = index < ZONE_CONFIG.findIndex(
+      (entry) => entry.id === state.activeZoneId,
+    );
+    stop.disabled = !isUnlocked || isBehind;
     stop.classList.toggle("is-current", isCurrent);
     stop.classList.toggle("is-visited", isUnlocked && !isCurrent);
     stop.classList.toggle("is-next", isNext);
@@ -401,7 +404,13 @@ function renderZoneJourney(elements: GameUiElements, state: GameState): void {
     stop.setAttribute(
       "aria-label",
       `${index + 1}. ${zone.name}: ${
-        isCurrent ? "текущая зона" : isUnlocked ? "пройденная зона" : "закрыта"
+        isCurrent
+          ? "текущая зона"
+          : isBehind
+            ? "пройдена, возврат недоступен"
+            : isUnlocked
+              ? "доступна"
+              : "закрыта"
       }`,
     );
     const status = stop.querySelector<HTMLElement>(".zone-stop-state");
@@ -409,7 +418,9 @@ function renderZoneJourney(elements: GameUiElements, state: GameState): void {
       status.textContent = isCurrent
         ? "Вы здесь"
         : isUnlocked
-          ? "Пройдена"
+          ? isBehind
+            ? "Пройдена · без возврата"
+            : "Доступна"
           : isNext && route.canTransition
             ? "Доступна"
             : "Закрыта";
