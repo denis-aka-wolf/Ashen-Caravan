@@ -43,12 +43,9 @@ export interface GameUiElements {
   findsHint: HTMLElement;
   offlineNotice: HTMLElement;
   findingLayer: HTMLElement;
-  zoneSelect: HTMLSelectElement;
-  visitZoneButton: HTMLButtonElement;
+  zoneMap: HTMLElement;
   routeProgressLabel: HTMLElement;
   routeProgressValue: HTMLElement;
-  routeProgressTrack: HTMLElement;
-  routeProgressFill: HTMLElement;
   advanceZoneButton: HTMLButtonElement;
   airshipButton: HTMLButtonElement;
   tabButtons: HTMLButtonElement[];
@@ -75,12 +72,9 @@ export function getGameUiElements(): GameUiElements {
     findsHint: requireElement("#finds-hint"),
     offlineNotice: requireElement("#offline-notice"),
     findingLayer: requireElement("#finding-layer"),
-    zoneSelect: requireElement("#zone-select") as HTMLSelectElement,
-    visitZoneButton: requireElement("#visit-zone") as HTMLButtonElement,
+    zoneMap: requireElement("#zone-map"),
     routeProgressLabel: requireElement("#route-progress-label"),
     routeProgressValue: requireElement("#route-progress-value"),
-    routeProgressTrack: requireElement("#route-progress-track"),
-    routeProgressFill: requireElement("#route-progress-fill"),
     advanceZoneButton: requireElement("#advance-zone") as HTMLButtonElement,
     airshipButton: requireElement("#airship-button") as HTMLButtonElement,
     tabButtons: Array.from(document.querySelectorAll<HTMLButtonElement>("#game-tabs [data-tab]")),
@@ -114,7 +108,6 @@ export function renderGameUi(
   elements.airshipButton.hidden =
     state.airshipExpiresAtSeconds <= state.clockSeconds ||
     state.airshipExpiresAtSeconds === 0;
-  renderZones(elements.zoneSelect, elements.visitZoneButton, state);
   renderZoneJourney(elements, state);
 
   for (const button of elements.tabButtons) {
@@ -374,39 +367,67 @@ function renderLeaderboardTab(
   `;
 }
 
-function renderZones(
-  select: HTMLSelectElement,
-  visitButton: HTMLButtonElement,
-  state: GameState,
-): void {
-  const currentOptions = ZONE_CONFIG.filter((zone) => state.unlockedZones.includes(zone.id));
-  const signature = currentOptions.map((zone) => zone.id).join(",");
-  if (select.dataset.options !== signature) {
-    select.innerHTML = currentOptions
-      .map((zone) => `<option value="${zone.id}">${zone.name}</option>`)
-      .join("");
-    select.dataset.options = signature;
-  }
-  if (select.dataset.activeZone !== state.activeZoneId) {
-    select.value = state.activeZoneId;
-    select.dataset.activeZone = state.activeZoneId;
-  }
-  const selectedZone = ZONE_CONFIG.find((zone) => zone.id === select.value);
-  visitButton.hidden = !selectedZone || selectedZone.id === state.activeZoneId;
-  if (selectedZone) {
-    visitButton.textContent = `Перейти в «${selectedZone.name}»`;
-  }
-}
-
 function renderZoneJourney(elements: GameUiElements, state: GameState): void {
   const route = getZoneTransitionProgress(state);
   const percentage = Math.floor(route.progress * 100);
-  elements.routeProgressTrack.setAttribute("aria-valuenow", String(percentage));
-  elements.routeProgressTrack.style.setProperty(
-    "--route-progress",
-    `${percentage}%`,
-  );
-  elements.routeProgressFill.style.width = `${percentage}%`;
+  const unlockedCount = ZONE_CONFIG.filter((zone) =>
+    state.unlockedZones.includes(zone.id),
+  ).length;
+  const signature = state.unlockedZones.join(",");
+  if (elements.zoneMap.dataset.signature !== signature) {
+    elements.zoneMap.innerHTML = ZONE_CONFIG.map((zone, index) => {
+      const connector = index > 0
+        ? `<div class="zone-connector" data-connector="${index}" aria-hidden="true"><span></span></div>`
+        : "";
+      return `${connector}<button class="zone-stop" type="button" data-zone="${zone.id}"><span class="zone-stop-number">${index + 1}</span><strong class="zone-stop-name">${zone.name}</strong><span class="zone-stop-state"></span></button>`;
+    }).join("");
+    elements.zoneMap.dataset.signature = signature;
+  }
+  for (const [index, zone] of ZONE_CONFIG.entries()) {
+    const stop = elements.zoneMap.querySelector<HTMLButtonElement>(
+      `[data-zone="${zone.id}"]`,
+    );
+    if (!stop) {
+      throw new Error(`Missing route stop for zone ${zone.id}.`);
+    }
+    const isUnlocked = state.unlockedZones.includes(zone.id);
+    const isCurrent = state.activeZoneId === zone.id;
+    const isNext = index === unlockedCount;
+    stop.disabled = !isUnlocked;
+    stop.classList.toggle("is-current", isCurrent);
+    stop.classList.toggle("is-visited", isUnlocked && !isCurrent);
+    stop.classList.toggle("is-next", isNext);
+    stop.setAttribute("aria-current", isCurrent ? "step" : "false");
+    stop.setAttribute(
+      "aria-label",
+      `${index + 1}. ${zone.name}: ${
+        isCurrent ? "текущая зона" : isUnlocked ? "пройденная зона" : "закрыта"
+      }`,
+    );
+    const status = stop.querySelector<HTMLElement>(".zone-stop-state");
+    if (status) {
+      status.textContent = isCurrent
+        ? "Вы здесь"
+        : isUnlocked
+          ? "Пройдена"
+          : isNext && route.canTransition
+            ? "Доступна"
+            : "Закрыта";
+    }
+    const connector = elements.zoneMap.querySelector<HTMLElement>(
+      `[data-connector="${index}"]`,
+    );
+    if (connector) {
+      const connectorProgress = index < unlockedCount
+        ? 100
+        : index === unlockedCount
+          ? percentage
+          : 0;
+      connector.style.setProperty("--connector-progress", `${connectorProgress}%`);
+      connector.classList.toggle("is-complete", connectorProgress >= 100);
+      connector.classList.toggle("is-active", index === unlockedCount);
+    }
+  }
   if (!route.zone) {
     elements.routeProgressLabel.textContent = "Все зоны маршрута пройдены";
     elements.routeProgressValue.textContent = "100%";
@@ -418,7 +439,7 @@ function renderZoneJourney(elements: GameUiElements, state: GameState): void {
     ? "Переход открыт"
     : `${formatNumber(route.income)} / ${formatNumber(route.threshold)} лома/с`;
   elements.advanceZoneButton.hidden = !route.canTransition;
-  elements.advanceZoneButton.textContent = `Перейти в «${route.zone.name}»`;
+  elements.advanceZoneButton.textContent = `Продолжить путь: ${route.zone.name}`;
 }
 
 function renderFindingTargets(layer: HTMLElement, state: GameState): void {

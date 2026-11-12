@@ -88,6 +88,32 @@ async function startGame(): Promise<void> {
   const render = () => {
     renderGameUi(elements, state, new Date(currentTime()), platformUi);
   };
+  let pointerDownInTabView = false;
+  let deferredTabRender = false;
+  elements.tabView.addEventListener("pointerdown", () => {
+    pointerDownInTabView = true;
+  });
+  document.addEventListener("pointerup", () => {
+    if (!pointerDownInTabView) {
+      return;
+    }
+    pointerDownInTabView = false;
+    if (deferredTabRender) {
+      window.setTimeout(() => {
+        if (!pointerDownInTabView && deferredTabRender) {
+          deferredTabRender = false;
+          render();
+        }
+      }, 50);
+    }
+  });
+  document.addEventListener("pointercancel", () => {
+    pointerDownInTabView = false;
+    if (deferredTabRender) {
+      deferredTabRender = false;
+      render();
+    }
+  });
   const routeScene = new RouteScene();
   const game = new Phaser.Game({
     type: Phaser.CANVAS,
@@ -324,16 +350,16 @@ async function startGame(): Promise<void> {
     }
   });
 
-  elements.zoneSelect.addEventListener("change", () => {
-    elements.visitZoneButton.hidden =
-      elements.zoneSelect.value === state.activeZoneId;
-    const zoneName =
-      elements.zoneSelect.selectedOptions[0]?.textContent ?? "зону";
-    elements.visitZoneButton.textContent = `Перейти в «${zoneName}»`;
-  });
-
-  elements.visitZoneButton.addEventListener("click", () => {
-    const result = setActiveZone(state, elements.zoneSelect.value);
+  elements.zoneMap.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const stop = target.closest<HTMLButtonElement>("button[data-zone]");
+    if (!stop || stop.disabled) {
+      return;
+    }
+    const result = setActiveZone(state, stop.dataset.zone ?? "");
     showActionNotice(actionNotice, result.message);
     saveGame(window.localStorage, state, currentTime());
     render();
@@ -459,7 +485,11 @@ async function startGame(): Promise<void> {
       saveElapsedSeconds = 0;
     }
     if (renderElapsedSeconds >= 0.25) {
-      render();
+      if (pointerDownInTabView) {
+        deferredTabRender = true;
+      } else {
+        render();
+      }
       renderElapsedSeconds = 0;
     }
     if (platform && platformUi.cloudEnabled && cloudSaveElapsedSeconds >= 60) {

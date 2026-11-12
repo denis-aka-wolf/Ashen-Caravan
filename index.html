@@ -41,9 +41,6 @@
           <span id="finds-hint">Нажимайте на находки</span>
         </div>
         <div class="route-controls">
-          <label for="zone-select">Зона</label>
-          <select id="zone-select" aria-label="Выбрать зону"></select>
-          <button id="visit-zone" class="button button-small" type="button" hidden>Перейти</button>
           <button id="airship-button" class="button" type="button" hidden>Дирижабль!</button>
         </div>
         <div class="route-progress">
@@ -51,10 +48,8 @@
             <span id="route-progress-label">Маршрут</span>
             <span id="route-progress-value">0%</span>
           </div>
-          <div id="route-progress-track" class="route-progress-track" role="progressbar" aria-label="Прогресс до следующей зоны" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <div id="route-progress-fill" class="route-progress-fill">
-            </div>
-            <span class="route-caravan" aria-hidden="true">🚚</span>
+          <div class="zone-map-scroll">
+            <div id="zone-map" class="zone-map" aria-label="Дорога по зонам маршрута"></div>
           </div>
           <button id="advance-zone" class="button" type="button" hidden>Перейти в следующую зону</button>
         </div>
